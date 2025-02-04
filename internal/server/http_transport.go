@@ -7,13 +7,80 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/plainq/plainq/internal/houston"
 	v1 "github.com/plainq/plainq/internal/server/schema/v1"
+	"github.com/plainq/plainq/internal/server/storage"
 	"github.com/plainq/servekit/errkit"
+	"github.com/plainq/servekit/idkit"
 	"github.com/plainq/servekit/respond"
 )
+
+func (s *PlainQ) createAccountHandler(w http.ResponseWriter, r *http.Request) {
+	type request struct {
+		Email    string `json:"email"`
+		Password string `json:"password"`
+		Name     string `json:"name,omitempty"`
+	}
+
+	var req request
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respond.ErrorHTTP(w, r, fmt.Errorf("%w: decode request json: %s", errkit.ErrInvalidArgument, err.Error()))
+		return
+	}
+
+	defer func() {
+		if err := r.Body.Close(); err != nil {
+			s.logger.Error("create account: close request body",
+				slog.String("error", err.Error()),
+			)
+		}
+	}()
+
+	if req.Name != "" {
+		if err := validateUserName(req.Name); err != nil {
+			respond.ErrorHTTP(w, r, fmt.Errorf("validate user name: %w", err))
+			return
+		}
+	}
+
+	if err := validatePassword(req.Password); err != nil {
+		respond.ErrorHTTP(w, r, fmt.Errorf("validate user password: %w", err))
+		return
+	}
+
+	hashedPassword, hashErr := s.hasher.HashPassword(req.Password)
+	if hashErr != nil {
+		respond.ErrorHTTP(w, r, fmt.Errorf("hash user password: %w", hashErr))
+		return
+	}
+
+	verified := true
+
+	if s.cfg.AuthRegistrationEnable {
+		verified = false
+	}
+
+	userAccount := storage.Account{
+		ID:        idkit.ULID(),
+		Name:      req.Name,
+		Email:     req.Email,
+		Password:  hashedPassword,
+		Verified:  verified,
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	}
+
+	if err := s.account.CreateAccount(r.Context(), userAccount); err != nil {
+		respond.ErrorHTTP(w, r, fmt.Errorf("create user record: %w", hashErr))
+		return
+	}
+
+	respond.Status(w, r, http.StatusCreated)
+}
 
 func (s *PlainQ) createQueueHandler(w http.ResponseWriter, r *http.Request) {
 	var input v1.CreateQueueRequest
@@ -31,7 +98,7 @@ func (s *PlainQ) createQueueHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 
-	output, createErr := s.storage.CreateQueue(r.Context(), &input)
+	output, createErr := s.queue.CreateQueue(r.Context(), &input)
 	if createErr != nil {
 		respond.ErrorHTTP(w, r, createErr)
 		return
@@ -61,7 +128,7 @@ func (s *PlainQ) listQueuesHandler(w http.ResponseWriter, r *http.Request) {
 		input.Limit = int32(limit)
 	}
 
-	output, listErr := s.storage.ListQueues(r.Context(), &input)
+	output, listErr := s.queue.ListQueues(r.Context(), &input)
 	if listErr != nil {
 		respond.ErrorHTTP(w, r, listErr)
 		return
@@ -80,7 +147,7 @@ func (s *PlainQ) describeQueueHandler(w http.ResponseWriter, r *http.Request) {
 
 	input := v1.DescribeQueueRequest{QueueId: id}
 
-	output, describeErr := s.storage.DescribeQueue(r.Context(), &input)
+	output, describeErr := s.queue.DescribeQueue(r.Context(), &input)
 	if describeErr != nil {
 		respond.ErrorHTTP(w, r, describeErr)
 		return
@@ -107,7 +174,7 @@ func (s *PlainQ) deleteQueueHandler(w http.ResponseWriter, r *http.Request) {
 		Force:   force,
 	}
 
-	output, deleteErr := s.storage.DeleteQueue(r.Context(), &input)
+	output, deleteErr := s.queue.DeleteQueue(r.Context(), &input)
 	if deleteErr != nil {
 		respond.ErrorHTTP(w, r, deleteErr)
 		return
@@ -124,7 +191,7 @@ func (s *PlainQ) purgeQueueHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	output, purgeErr := s.storage.PurgeQueue(r.Context(), &v1.PurgeQueueRequest{
+	output, purgeErr := s.queue.PurgeQueue(r.Context(), &v1.PurgeQueueRequest{
 		QueueId: id,
 	})
 	if purgeErr != nil {

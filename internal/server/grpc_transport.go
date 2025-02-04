@@ -8,7 +8,7 @@ import (
 )
 
 func (s *PlainQ) ListQueues(ctx context.Context, r *v1.ListQueuesRequest) (*v1.ListQueuesResponse, error) {
-	output, listErr := s.storage.ListQueues(ctx, r)
+	output, listErr := s.queue.ListQueues(ctx, r)
 	if listErr != nil {
 		return respond.ErrorGRPC[*v1.ListQueuesResponse](ctx, listErr)
 	}
@@ -21,7 +21,7 @@ func (s *PlainQ) DescribeQueue(ctx context.Context, r *v1.DescribeQueueRequest) 
 		return respond.ErrorGRPC[*v1.DescribeQueueResponse](ctx, err)
 	}
 
-	output, createErr := s.storage.DescribeQueue(ctx, r)
+	output, createErr := s.queue.DescribeQueue(ctx, r)
 	if createErr != nil {
 		return respond.ErrorGRPC[*v1.DescribeQueueResponse](ctx, createErr)
 	}
@@ -30,7 +30,7 @@ func (s *PlainQ) DescribeQueue(ctx context.Context, r *v1.DescribeQueueRequest) 
 }
 
 func (s *PlainQ) CreateQueue(ctx context.Context, r *v1.CreateQueueRequest) (*v1.CreateQueueResponse, error) {
-	output, createErr := s.storage.CreateQueue(ctx, r)
+	output, createErr := s.queue.CreateQueue(ctx, r)
 	if createErr != nil {
 		return respond.ErrorGRPC[*v1.CreateQueueResponse](ctx, createErr)
 	}
@@ -43,7 +43,7 @@ func (s *PlainQ) DeleteQueue(ctx context.Context, r *v1.DeleteQueueRequest) (*v1
 		return respond.ErrorGRPC[*v1.DeleteQueueResponse](ctx, err)
 	}
 
-	if _, err := s.storage.DeleteQueue(ctx, r); err != nil {
+	if _, err := s.queue.DeleteQueue(ctx, r); err != nil {
 		return respond.ErrorGRPC[*v1.DeleteQueueResponse](ctx, err)
 	}
 
@@ -55,7 +55,7 @@ func (s *PlainQ) PurgeQueue(ctx context.Context, r *v1.PurgeQueueRequest) (*v1.P
 		return respond.ErrorGRPC[*v1.PurgeQueueResponse](ctx, err)
 	}
 
-	output, purgeErr := s.storage.PurgeQueue(ctx, r)
+	output, purgeErr := s.queue.PurgeQueue(ctx, r)
 	if purgeErr != nil {
 		return respond.ErrorGRPC[*v1.PurgeQueueResponse](ctx, purgeErr)
 	}
@@ -68,7 +68,7 @@ func (s *PlainQ) Send(ctx context.Context, r *v1.SendRequest) (*v1.SendResponse,
 		return respond.ErrorGRPC[*v1.SendResponse](ctx, err)
 	}
 
-	output, sendErr := s.storage.Send(ctx, r)
+	output, sendErr := s.queue.Send(ctx, r)
 	if sendErr != nil {
 		return respond.ErrorGRPC[*v1.SendResponse](ctx, sendErr)
 	}
@@ -81,7 +81,7 @@ func (s *PlainQ) Receive(ctx context.Context, r *v1.ReceiveRequest) (*v1.Receive
 		return respond.ErrorGRPC[*v1.ReceiveResponse](ctx, err)
 	}
 
-	output, receiveErr := s.storage.Receive(ctx, r)
+	output, receiveErr := s.queue.Receive(ctx, r)
 	if receiveErr != nil {
 		return respond.ErrorGRPC[*v1.ReceiveResponse](ctx, receiveErr)
 	}
@@ -94,7 +94,7 @@ func (s *PlainQ) Delete(ctx context.Context, r *v1.DeleteRequest) (*v1.DeleteRes
 		return respond.ErrorGRPC[*v1.DeleteResponse](ctx, err)
 	}
 
-	output, deleteErr := s.storage.Delete(ctx, r)
+	output, deleteErr := s.queue.Delete(ctx, r)
 	if deleteErr != nil {
 		return respond.ErrorGRPC[*v1.DeleteResponse](ctx, deleteErr)
 	}

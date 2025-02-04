@@ -27,6 +27,9 @@ type Config struct {
 	StorageAccessMode  string
 	StorageJournalMode string
 
+	AuthEnable             bool
+	AuthRegistrationEnable bool
+
 	TelemetryEnabled   bool
 	TelemetryLogEnable bool
 	TelemetryProvider  string

@@ -13,6 +13,7 @@ import (
 	"github.com/plainq/plainq/internal/server/storage"
 	"github.com/plainq/plainq/internal/server/telemetry"
 	"github.com/plainq/servekit"
+	"github.com/plainq/servekit/authkit/hashkit"
 	"github.com/plainq/servekit/grpckit"
 	"github.com/plainq/servekit/httpkit"
 	vtgrpc "github.com/planetscale/vtprotobuf/codec/grpc"
@@ -25,21 +26,32 @@ import (
 type PlainQ struct {
 	v1.UnimplementedPlainQServiceServer
 
+	cfg      *config.Config
 	logger   *slog.Logger
-	storage  storage.Storage
+	queue    storage.QueueStorage
+	account  storage.AccountStorage
+	hasher   hashkit.Hasher
 	observer telemetry.Observer
 }
 
 func (s *PlainQ) Mount(server *grpc.Server) { v1.RegisterPlainQServiceServer(server, s) }
 
 // NewServer returns a pointer to a new instance of the PlainQ.
-func NewServer(cfg *config.Config, logger *slog.Logger, storage storage.Storage, checker hc.HealthChecker) (*servekit.Server, error) {
+func NewServer(
+	cfg *config.Config,
+	logger *slog.Logger,
+	checker hc.HealthChecker,
+	queue storage.QueueStorage,
+	account storage.AccountStorage,
+) (*servekit.Server, error) {
 	// Create a server which holds and serve all listeners.
 	server := servekit.NewServer(logger)
 
 	pq := PlainQ{
+		cfg:      cfg,
 		logger:   logger,
-		storage:  storage,
+		queue:    queue,
+		account:  account,
 		observer: telemetry.NewObserver(),
 	}
 
@@ -55,6 +67,12 @@ func NewServer(cfg *config.Config, logger *slog.Logger, storage storage.Storage,
 		api.Use(cors.AllowAll().Handler)
 
 		api.Route("/v1", func(v1 chi.Router) {
+			if cfg.AuthEnable {
+				v1.Route("/account", func(account chi.Router) {
+					account.Post("/", pq.createAccountHandler)
+				})
+			}
+
 			// Queue related routes.
 			v1.Route("/queue", func(queue chi.Router) {
 				queue.Post("/", pq.createQueueHandler)
@@ -67,8 +85,7 @@ func NewServer(cfg *config.Config, logger *slog.Logger, storage storage.Storage,
 	})
 
 	// Initialize and mount the Houston UI related routes.
-	// There are routes responsible for static assets,
-	// HTMX template parts, of full template pages.
+	// There are routes responsible for static assets.
 	httpListener.MountGroup("/", func(ui chi.Router) {
 		// Static assets.
 		ui.Get("/*", pq.houstonStaticHandler)

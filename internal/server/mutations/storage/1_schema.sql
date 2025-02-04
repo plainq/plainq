@@ -33,20 +33,46 @@ create table if not exists "settings"
 create table if not exists "accounts"
 (
     account_id  varchar(26)                             not null,
-    user_name   text                                    not null,
     email       text                                    not null,
     password    text                                    not null,
     verified    boolean   default false                 not null,
     created_at  timestamp default current_timestamp     not null,
     updated_at  timestamp default current_timestamp     not null,
 
-    constraint users_pk primary key (user_id)
+    constraint accounts_pk primary key (account_id)
 );
 
-create unique index if not exists users_email_uindex on accounts (email);
+create unique index if not exists accounts_email_uindex on accounts (email);
 
 ---
 
+create table if not exists refresh_tokens
+(
+    id         varchar(26)                             not null,
+    aid        varchar(26) not null,
+    token      text        not null,
+    created_at timestamp default current_timestamp     not null,
+    expires_at timestamp default current_timestamp     not null,
+    constraint session_pk
+        primary key (id)
+);
+
+create unique index if not exists refresh_tokens_id_uindex
+    on refresh_tokens (id);
+
+create unique index if not exists refresh_tokens_token_uindex
+    on refresh_tokens (token);
+
+create table if not exists denylist
+(
+    token        text    not null,
+    denied_until integer not null,
+    constraint denylist_pk
+        primary key (token)
+);
+
+create unique index if not exists denylist_token_uindex
+    on denylist (token);
 
 
 ---

@@ -31,7 +31,7 @@ export function SignupForm({
                 <Input
                   id="email"
                   type="email"
-                  placeholder="me@plainq.com"
+                  placeholder="me@plainq.dev"
                   required
                 />
               </div>

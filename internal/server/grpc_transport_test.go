@@ -35,7 +35,7 @@ func Test_1(t *testing.T) {
 
 func TestServer_ListQueues(t *testing.T) {
 	type tcase struct {
-		storage storage.Storage
+		storage storage.QueueStorage
 		req     *v1.ListQueuesRequest
 
 		want    *v1.ListQueuesResponse
@@ -97,7 +97,7 @@ func TestServer_ListQueues(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			server := PlainQ{
-				storage: tc.storage,
+				queue: tc.storage,
 			}
 
 			res, err := server.ListQueues(context.Background(), tc.req)
