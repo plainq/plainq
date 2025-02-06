@@ -10,7 +10,7 @@ import (
 
 	"github.com/heartwilltell/hc"
 	v1 "github.com/plainq/plainq/internal/server/schema/v1"
-	"github.com/plainq/plainq/internal/server/telemetry"
+	"github.com/plainq/plainq/internal/server/service/telemetry"
 	"github.com/plainq/plainq/internal/shared/pqerr"
 	"github.com/plainq/servekit/dbkit/litekit"
 	"github.com/plainq/servekit/errkit"

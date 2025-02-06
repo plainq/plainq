@@ -31,8 +31,8 @@ type QueuePropsCache struct {
 	mu   sync.RWMutex
 	size uint64
 
-	byID   *swiss.Map[string, *list.Element]
-	byName *swiss.Map[string, *list.Element]
+	byID   *swiss.Map[string, *list.Element] // TODO: rewrite to use a map with go 1.24.
+	byName *swiss.Map[string, *list.Element] // TODO: rewrite to use a map with go 1.24.
 	props  *list.List
 }
 

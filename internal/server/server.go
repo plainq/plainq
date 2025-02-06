@@ -3,46 +3,42 @@ package server
 import (
 	"fmt"
 	"log/slog"
+	"net/http"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/cors"
 	"github.com/heartwilltell/hc"
+	"github.com/plainq/plainq/internal/houston"
 	"github.com/plainq/plainq/internal/server/config"
 	"github.com/plainq/plainq/internal/server/middleware"
-	v1 "github.com/plainq/plainq/internal/server/schema/v1"
-	"github.com/plainq/plainq/internal/server/storage"
-	"github.com/plainq/plainq/internal/server/telemetry"
+	"github.com/plainq/plainq/internal/server/service/account"
+	"github.com/plainq/plainq/internal/server/service/queue"
+	"github.com/plainq/plainq/internal/server/service/telemetry"
 	"github.com/plainq/servekit"
 	"github.com/plainq/servekit/authkit/hashkit"
 	"github.com/plainq/servekit/grpckit"
 	"github.com/plainq/servekit/httpkit"
-	vtgrpc "github.com/planetscale/vtprotobuf/codec/grpc"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/encoding"
 	_ "google.golang.org/grpc/encoding/proto"
 )
 
 // PlainQ represents plainq logic.
 type PlainQ struct {
-	v1.UnimplementedPlainQServiceServer
-
 	cfg      *config.Config
 	logger   *slog.Logger
-	queue    storage.QueueStorage
-	account  storage.AccountStorage
+	queue    *queue.Service
+	account  *account.Service
 	hasher   hashkit.Hasher
 	observer telemetry.Observer
 }
-
-func (s *PlainQ) Mount(server *grpc.Server) { v1.RegisterPlainQServiceServer(server, s) }
 
 // NewServer returns a pointer to a new instance of the PlainQ.
 func NewServer(
 	cfg *config.Config,
 	logger *slog.Logger,
 	checker hc.HealthChecker,
-	queue storage.QueueStorage,
-	account storage.AccountStorage,
+	queue *queue.Service,
+	account *account.Service,
 ) (*servekit.Server, error) {
 	// Create a server which holds and serve all listeners.
 	server := servekit.NewServer(logger)
@@ -69,17 +65,13 @@ func NewServer(
 		api.Route("/v1", func(v1 chi.Router) {
 			if cfg.AuthEnable {
 				v1.Route("/account", func(account chi.Router) {
-					account.Post("/", pq.createAccountHandler)
+					account.Mount("/", pq.account)
 				})
 			}
 
 			// Queue related routes.
 			v1.Route("/queue", func(queue chi.Router) {
-				queue.Post("/", pq.createQueueHandler)
-				queue.Get("/", pq.listQueuesHandler)
-				queue.Get("/{id}", pq.describeQueueHandler)
-				queue.Post("/{id}/purge", pq.purgeQueueHandler)
-				queue.Delete("/{id}", pq.deleteQueueHandler)
+				queue.Mount("/", pq.queue)
 			})
 		})
 	})
@@ -99,13 +91,27 @@ func NewServer(
 		return nil, fmt.Errorf("create gRPC listener: %w", grpcListenerErr)
 	}
 
-	// Mount the plainq gRPC routes to the gRPC listener.
-	grpcListener.Mount(&pq)
+	// Mount the queue gRPC routes to the gRPC listener.
+	grpcListener.Mount(pq.queue)
 
 	// Register the gRPC listener with a server.
 	server.RegisterListener("GRPC", grpcListener)
 
 	return server, nil
+}
+
+func (s *PlainQ) houstonStaticHandler(w http.ResponseWriter, r *http.Request) {
+	routePattern := chi.RouteContext(r.Context()).RoutePattern()
+	pathPrefix := strings.TrimSuffix(routePattern, "/*")
+
+	s.logger.Debug("houston static handler",
+		slog.String("path", r.URL.Path),
+		slog.String("route_pattern", routePattern),
+		slog.String("path_prefix", pathPrefix),
+	)
+
+	http.StripPrefix(pathPrefix, http.FileServerFS(houston.Bundle())).
+		ServeHTTP(w, r)
 }
 
 func listenerHTTP(cfg *config.Config, logger *slog.Logger, checker hc.HealthChecker) (*httpkit.ListenerHTTP, error) {
@@ -141,5 +147,3 @@ func listenerHTTP(cfg *config.Config, logger *slog.Logger, checker hc.HealthChec
 
 	return httpListener, nil
 }
-
-func init() { encoding.RegisterCodec(vtgrpc.Codec{}) }

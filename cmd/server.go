@@ -15,7 +15,7 @@ import (
 	"github.com/plainq/plainq/internal/server"
 	"github.com/plainq/plainq/internal/server/config"
 	"github.com/plainq/plainq/internal/server/mutations"
-	"github.com/plainq/plainq/internal/server/storage/litestore"
+	queuestore"github.com/plainq/plainq/internal/server/service/queue/litestore"
 	"github.com/plainq/servekit/dbkit/litekit"
 	"github.com/plainq/servekit/logkit"
 )
@@ -71,6 +71,14 @@ func serverCommand() *scotty.Command {
 
 			f.BoolVar(&cfg.AuthRegistrationEnable, "auth.registration.enable", true,
 				"enable registration",
+			)
+
+			f.DurationVar(&cfg.AuthAccessTokenTTL, "auth.access.ttl", 60*time.Minute,
+				"set access token TTL",
+			)
+
+			f.DurationVar(&cfg.AuthRefreshTokenTTL, "auth.refresh.ttl", 24*30*time.Hour,
+				"set refresh token TTL",
 			)
 
 			// Telemetry.
@@ -191,7 +199,12 @@ func serverCommand() *scotty.Command {
 
 			// Storage initialization.
 
-			sqliteStorage, storageInitErr := initStorage(&cfg, logger)
+			conn, connErr := initDBConnection(&cfg, logger)
+			if connErr != nil {
+				return connErr
+			}
+
+			sqliteStorage, storageInitErr := initStorage(&cfg, logger, conn)
 			if storageInitErr != nil {
 				return storageInitErr
 			}
@@ -210,7 +223,10 @@ func serverCommand() *scotty.Command {
 				checker = hc.NewMultiChecker(sqliteStorage)
 			}
 
-			plainqServer, serverErr := server.NewServer(&cfg, logger, sqliteStorage, checker)
+			queueService := queue.NewService(cfg, logger, sqliteStorage)
+			accountService := account.NewService(cfg, logger, sqliteStorage)
+
+			plainqServer, serverErr := server.NewServer(&cfg, logger, checker)
 			if serverErr != nil {
 				return fmt.Errorf("create PlainQ server: %s", serverErr.Error())
 			}
@@ -249,7 +265,7 @@ func initLogger(cfg *config.Config) (*slog.Logger, error) {
 	return logger, nil
 }
 
-func initStorage(cfg *config.Config, logger *slog.Logger) (*litestore.Storage, error) {
+func initDBConnection(cfg *config.Config, logger *slog.Logger) (*litekit.Conn, error) {
 	if cfg.StorageDBPath == "" {
 		pwd, pwdErr := os.Getwd()
 		if pwdErr != nil {
@@ -258,12 +274,8 @@ func initStorage(cfg *config.Config, logger *slog.Logger) (*litestore.Storage, e
 
 		dbPath, err := filepath.Abs(filepath.Join(pwd, "plainq.db"))
 		if err != nil {
-			return nil, fmt.Errorf("create storage file: %w", err)
+			return nil, fmt.Errorf("create database file: %w", err)
 		}
-
-		logger.Info("Storage has been initialized",
-			slog.String("path", dbPath),
-		)
 
 		cfg.StorageDBPath = dbPath
 	}
@@ -292,6 +304,10 @@ func initStorage(cfg *config.Config, logger *slog.Logger) (*litestore.Storage, e
 		return nil, fmt.Errorf("connect to database: %w", conErr)
 	}
 
+	logger.Info("Database connection has been initialized",
+		slog.String("path", cfg.StorageDBPath),
+	)
+
 	evolver, evolverErr := litekit.NewEvolver(conn, mutations.StorageMutations())
 	if evolverErr != nil {
 		return nil, fmt.Errorf("create schema evolver: %w", evolverErr)
@@ -301,17 +317,25 @@ func initStorage(cfg *config.Config, logger *slog.Logger) (*litestore.Storage, e
 		return nil, fmt.Errorf("schema mutation: %w", err)
 	}
 
-	storageOptions := make([]litestore.Option, 0, 2)
+	logger.Info("Database schema has been initialized",
+		slog.String("path", cfg.StorageDBPath),
+	)
+
+	return conn, nil
+}
+
+func initStorage(cfg *config.Config, logger *slog.Logger, conn *litekit.Conn) (*queuestore.Storage, error) {
+	storageOptions := make([]queuestore.Option, 0, 2)
 
 	if cfg.StorageLogEnable {
-		storageOptions = append(storageOptions, litestore.WithLogger(logger))
+		storageOptions = append(storageOptions, queuestore.WithLogger(logger))
 	}
 
 	if cfg.StorageGCTimeout != 0 {
-		storageOptions = append(storageOptions, litestore.WithGCTimeout(cfg.StorageGCTimeout))
+		storageOptions = append(storageOptions, queuestore.WithGCTimeout(cfg.StorageGCTimeout))
 	}
 
-	sqliteStorage, storageInitErr := litestore.New(conn, storageOptions...)
+	sqliteStorage, storageInitErr := queuestore.New(conn, storageOptions...)
 	if storageInitErr != nil {
 		return nil, fmt.Errorf("create storage: %w", storageInitErr)
 	}

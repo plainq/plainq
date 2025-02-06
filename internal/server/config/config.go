@@ -29,6 +29,8 @@ type Config struct {
 
 	AuthEnable             bool
 	AuthRegistrationEnable bool
+	AuthAccessTokenTTL     time.Duration
+	AuthRefreshTokenTTL    time.Duration
 
 	TelemetryEnabled   bool
 	TelemetryLogEnable bool

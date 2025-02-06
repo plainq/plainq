@@ -1,4 +1,4 @@
-package server
+package account
 
 import (
 	"fmt"
@@ -6,35 +6,12 @@ import (
 	"unicode/utf8"
 
 	"github.com/plainq/servekit/errkit"
-	"github.com/plainq/servekit/idkit"
 )
 
 const (
 	minNameLen, maxNameLen = 2, 50
 	minPassLen, maxPassLen = 6, 50
 )
-
-// validateQueueIDFromRequest performs validation of the queue identifier.
-func validateQueueIDFromRequest(r interface{ GetQueueId() string }) error {
-	if r == nil {
-		return errkit.ErrInvalidID
-	}
-
-	return validateQueueID(r.GetQueueId())
-}
-
-// validateQueueID validates given queue identifier.
-func validateQueueID(queueID string) error {
-	if queueID == "" {
-		return errkit.ErrInvalidID
-	}
-
-	if err := idkit.ValidateXID(strings.ToLower(queueID)); err != nil {
-		return errkit.ErrInvalidID
-	}
-
-	return nil
-}
 
 // validateUserName validates given name.
 func validateUserName(name string) error {
