@@ -13,7 +13,12 @@ import (
 	"github.com/plainq/servekit/authkit/jwtkit"
 	"github.com/plainq/servekit/errkit"
 	"github.com/plainq/servekit/idkit"
+	"github.com/plainq/servekit/mailkit"
 	"github.com/plainq/servekit/respond"
+)
+
+const (
+	tokenIssuer = "plainq-server"
 )
 
 func (s *Service) signUpHandler(w http.ResponseWriter, r *http.Request) {
@@ -150,11 +155,11 @@ func (s *Service) refreshHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req request
-	
+
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		respond.ErrorHTTP(w, r, fmt.Errorf("%w: decode request json: %s", errkit.ErrInvalidArgument, err.Error()))
 		return
-	}	
+	}
 
 	defer func() {
 		if err := r.Body.Close(); err != nil {
@@ -164,14 +169,32 @@ func (s *Service) refreshHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 
-	// Delete the old refresh token
+	token, parseErr := s.tokman.ParseVerify(req.RefreshToken)
+	if parseErr != nil {
+		respond.ErrorHTTP(w, r, fmt.Errorf("%w: parse refresh token: %s", errkit.ErrUnauthenticated, parseErr.Error()))
+		return
+	}
+
+	aid, ok := token.Meta["aid"]
+	if !ok {
+		respond.ErrorHTTP(w, r, errkit.ErrUnauthenticated)
+		return
+	}
+
+	accountID, ok := aid.(string)
+	if !ok {
+		respond.ErrorHTTP(w, r, errkit.ErrUnauthenticated)
+		return
+	}
+
+	// Delete the old refresh token.
 	if err := s.storage.DeleteRefreshToken(r.Context(), req.RefreshToken); err != nil {
 		respond.ErrorHTTP(w, r, fmt.Errorf("delete refresh token: %w", err))
 		return
 	}
 
-	// Create new session
-	session, err := s.createSession(r.Context(), account.ID)
+	// Create new session.
+	session, err := s.createSession(r.Context(), accountID, idkit.ULID(), time.Now())
 	if err != nil {
 		respond.ErrorHTTP(w, r, fmt.Errorf("create session: %w", err))
 		return
@@ -197,7 +220,18 @@ func (s *Service) emailVerificationHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	// TODO: Implement email verification code sending logic
+	code := idkit.DigiCode()
+
+	if err := s.mailer.Send(r.Context(), mailkit.Message{
+		From:    "noreply@plainq.com",
+		To:      []string{req.Email},
+		Subject: "Verify your email",
+		HTML:    fmt.Sprintf("<p>Click <a href='https://plainq.com/verify?code=%s'>here</a> to verify your email.</p>", code),
+		Text:    fmt.Sprintf("Click here to verify your email: https://plainq.com/verify?code=%s", code),
+	}); err != nil {
+		respond.ErrorHTTP(w, r, fmt.Errorf("send email: %w", err))
+		return
+	}
 
 	respond.Status(w, r, http.StatusOK)
 }
@@ -261,7 +295,7 @@ func (s *Service) verifyPasswordResetCodeHandler(w http.ResponseWriter, r *http.
 	}
 
 	var req request
-	
+
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		respond.ErrorHTTP(w, r, fmt.Errorf("%w: decode request json: %s", errkit.ErrInvalidArgument, err.Error()))
 		return
@@ -280,54 +314,62 @@ func (s *Service) verifyPasswordResetCodeHandler(w http.ResponseWriter, r *http.
 	respond.Status(w, r, http.StatusOK)
 }
 
+// createSession is a helper function to create a new session.
 func (s *Service) createSession(ctx context.Context, aid, tid string, t time.Time) (*Session, error) {
-	accessToken := jwtkit.Token{
-		RegisteredClaims: jwt.RegisteredClaims{
-			ID:        "",
+	accessToken, aErr := s.tokman.Sign(&jwtkit.Token{
+		Claims: jwtkit.Claims{
+			ID:        tid,
 			Audience:  []string{},
-			Issuer:    "",
+			Issuer:    tokenIssuer,
 			Subject:   "",
-			ExpiresAt: &jwt.NumericDate{},
-			IssuedAt:  &jwt.NumericDate{},
-			NotBefore: &jwt.NumericDate{},
+			ExpiresAt: jwt.NewNumericDate(t.Add(s.cfg.AuthAccessTokenTTL)),
+			IssuedAt:  jwt.NewNumericDate(t),
+			NotBefore: jwt.NewNumericDate(t),
 		},
-		Meta: map[string]any{},
-	}
-
-	access, aErr := s.tokman.Sign(auth.Token{TID: tid, AID: aid, Iat: t, Exp: t.Add(auth.AccessTTL), Role: auth.User})
+		Meta: map[string]any{
+			"aid": aid,
+		},
+	})
 	if aErr != nil {
 		return nil, fmt.Errorf("account service: failed to create session: %w", aErr)
 	}
 
-	refresh, rErr := s.tokman.Sign(auth.Token{TID: tid, AID: aid, Iat: t, Exp: t.Add(auth.RefreshTTL)})
+	refreshToken, rErr := s.tokman.Sign(&jwtkit.Token{
+		Claims: jwtkit.Claims{
+			ID:        tid,
+			Audience:  []string{},
+			Issuer:    tokenIssuer,
+			Subject:   "",
+			ExpiresAt: jwt.NewNumericDate(t.Add(s.cfg.AuthRefreshTokenTTL)),
+			IssuedAt:  jwt.NewNumericDate(t),
+			NotBefore: jwt.NewNumericDate(t),
+		},
+		Meta: map[string]any{
+			"aid": aid,
+		},
+	})
 	if rErr != nil {
 		return nil, fmt.Errorf("account service: failed to create session: %w", rErr)
 	}
 
-	if err := s.store.CreateRefreshToken(ctx, RefreshToken{ID: tid, AID: aid, Token: refresh, CreatedAt: t, ExpiresAt: t.Add(auth.RefreshTTL)}); err != nil {
-		return nil, s.svcErrorf(err, "failed to save refresh token in database")
+	refreshTokenRecord := RefreshToken{
+		ID:        tid,
+		AID:       aid,
+		Token:     refreshToken,
+		CreatedAt: t,
+		ExpiresAt: t.Add(s.cfg.AuthRefreshTokenTTL),
+	}
+
+	if err := s.storage.CreateRefreshToken(ctx, refreshTokenRecord); err != nil {
+		return nil, fmt.Errorf("account service: failed to save refresh token in database: %w", err)
 	}
 
 	session := Session{
-		AccessToken:  access,
-		RefreshToken: refresh,
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
 		CreatedAt:    t,
-		ExpiresAt:    t.Add(auth.AccessTTL),
+		ExpiresAt:    t.Add(s.cfg.AuthAccessTokenTTL),
 	}
-
-	return &session, nil
-}
-
-// Helper function to create a new session
-func (s *Service) createSession(ctx context.Context, accountID string) (*Session, error) {
-	now := time.Now()
-	session := Session{
-		CreatedAt: now,
-		ExpiresAt: now.Add(s.cfg.AuthAccessTokenTTL),
-	}
-
-	// TODO: Implement JWT token generation
-	// TODO: Create and store refresh token
 
 	return &session, nil
 }

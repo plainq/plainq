@@ -10,6 +10,7 @@ import (
 	"github.com/plainq/plainq/internal/server/config"
 	"github.com/plainq/servekit/authkit/hashkit"
 	"github.com/plainq/servekit/authkit/jwtkit"
+	"github.com/plainq/servekit/mailkit"
 )
 
 // Storage encapsulates interaction with account storage.
@@ -89,6 +90,7 @@ type Service struct {
 	router  *chi.Mux
 	hasher  hashkit.Hasher
 	tokman  jwtkit.TokenManager
+	mailer  mailkit.Sender
 	storage Storage
 }
 

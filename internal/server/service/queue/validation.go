@@ -28,5 +28,3 @@ func validateQueueID(queueID string) error {
 
 	return nil
 }
-
-

@@ -9,7 +9,6 @@ import (
 
 	"github.com/maxatome/go-testdeep/td"
 	v1 "github.com/plainq/plainq/internal/server/schema/v1"
-	"github.com/plainq/plainq/internal/server/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -35,7 +34,7 @@ func Test_1(t *testing.T) {
 
 func TestServer_ListQueues(t *testing.T) {
 	type tcase struct {
-		storage storage.QueueStorage
+		storage *mockStorage
 		req     *v1.ListQueuesRequest
 
 		want    *v1.ListQueuesResponse
@@ -96,8 +95,8 @@ func TestServer_ListQueues(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			server := PlainQ{
-				queue: tc.storage,
+			server := &Service{
+				storage: tc.storage,
 			}
 
 			res, err := server.ListQueues(context.Background(), tc.req)
