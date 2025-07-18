@@ -45,7 +45,14 @@
 - Integration with RBAC system
 - User role fetching capability
 
-### 6. Documentation (`docs/authentication-rbac.md`)
+### 6. Onboarding Service (`internal/server/service/onboarding/`)
+✅ **Complete onboarding system** including:
+- **service.go**: Core onboarding logic
+- **http_transport.go**: REST API for initial setup
+- **storage.go**: SQLite storage for admin checking
+- Secure initial admin creation process
+
+### 7. Documentation (`docs/authentication-rbac.md`)
 ✅ **Comprehensive documentation** covering:
 - System architecture
 - Database schema
@@ -74,6 +81,7 @@
 - ✅ JWT authentication middleware
 - ✅ Role requirement middleware
 - ✅ Queue permission middleware
+- ✅ Onboarding requirement middleware
 - ✅ Context-based user information access
 
 ### API Endpoints
@@ -81,6 +89,7 @@
 - ✅ User role assignment endpoints
 - ✅ Queue permission management
 - ✅ Permission checking endpoints
+- ✅ Onboarding status and completion endpoints
 
 ## Database Schema Improvements
 
@@ -88,7 +97,7 @@
 - ✅ Unified user storage in `users` table
 - ✅ Fixed column name inconsistencies
 - ✅ Proper foreign key relationships
-- ✅ Default admin user setup
+- ✅ Secure onboarding process (no default admin user)
 
 ### RBAC Tables
 - ✅ `roles` table with default roles (admin, producer, consumer)
@@ -160,24 +169,40 @@ if !ok {
 // Use userInfo.UserID, userInfo.Email, userInfo.Roles
 ```
 
-## Default Credentials
+## Onboarding Process
 
-A default admin user is created:
-- **Email**: `admin@plainq.local`
-- **Password**: `admin`
-- **Role**: `admin`
+Instead of default credentials, PlainQ uses a secure onboarding process:
 
-> **Note**: Change default credentials in production!
+### Initial Setup
+- System checks for admin users on startup
+- If none exist, enters "onboarding mode"
+- Most endpoints return `428 Precondition Required`
+- Only onboarding and health endpoints remain accessible
+
+### Secure Admin Creation
+- **Endpoint**: `POST /onboarding/complete`
+- **Requirements**: Strong password (8+ chars), valid email
+- **Security**: Only one admin can be created during onboarding
+- **Automatic**: Admin role assignment and account verification
+
+### Benefits
+- ✅ No default credentials to change
+- ✅ Forced secure password selection
+- ✅ Race condition protection
+- ✅ Clear onboarding status indication
 
 ## Next Steps for Integration
 
 To complete the integration, you would need to:
 
 1. **Wire up services** in the main server initialization
-2. **Apply middleware** to existing queue endpoints
-3. **Update queue service** to use permission checking
-4. **Add RBAC routes** to the main router
-5. **Test the complete flow** end-to-end
+2. **Apply onboarding middleware** to protect endpoints
+3. **Apply authentication middleware** to existing queue endpoints  
+4. **Update queue service** to use permission checking
+5. **Add RBAC and onboarding routes** to the main router
+6. **Test the complete flow** end-to-end
+
+See `examples/server_integration.go` for a complete integration example.
 
 The foundation is now complete and ready for integration with the existing PlainQ server infrastructure.
 

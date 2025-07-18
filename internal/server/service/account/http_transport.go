@@ -22,6 +22,12 @@ const (
 )
 
 func (s *Service) signUpHandler(w http.ResponseWriter, r *http.Request) {
+	// Check if registration is enabled
+	if !s.cfg.AuthRegistrationEnable {
+		respond.ErrorHTTP(w, r, fmt.Errorf("%w: user registration is disabled", errkit.ErrUnauthorized))
+		return
+	}
+
 	type request struct {
 		Email    string `json:"email"`
 		Password string `json:"password"`

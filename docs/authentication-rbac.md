@@ -355,12 +355,63 @@ type Config struct {
 4. **Role Inheritance**: Admin role has all permissions
 5. **Input Validation**: All inputs are validated and sanitized
 
-## Default Admin User
+## Onboarding Process
 
-A default admin user is created during initialization:
-- Email: `admin@plainq.local`
-- Password: `admin` (should be changed in production)
-- Role: `admin`
+Instead of creating a default admin user, PlainQ implements a secure onboarding process:
+
+### Initial Setup Check
+When the server starts, it checks if any admin users exist. If not, the system enters "onboarding mode" where:
+- Most endpoints return a `428 Precondition Required` status
+- Only onboarding and health endpoints are accessible
+- The client is directed to complete the initial setup
+
+### Onboarding Endpoints
+
+#### Check Onboarding Status
+```
+GET /onboarding/status
+
+Response:
+{
+  "needs_onboarding": true,
+  "has_admin_users": false
+}
+```
+
+#### Complete Onboarding
+```
+POST /onboarding/complete
+{
+  "email": "admin@yourdomain.com",
+  "password": "your-secure-password",
+  "name": "Administrator"
+}
+
+Response:
+{
+  "admin": {
+    "user_id": "01HQ...",
+    "email": "admin@yourdomain.com",
+    "name": "Administrator",
+    "verified": true,
+    "created_at": "2024-01-01T00:00:00Z"
+  },
+  "session": {
+    "access_token": "eyJ...",
+    "refresh_token": "eyJ...",
+    "created_at": "2024-01-01T00:00:00Z",
+    "expires_at": "2024-01-01T01:00:00Z"
+  },
+  "message": "Onboarding completed successfully. Welcome to PlainQ!"
+}
+```
+
+### Security Features
+- Only one admin can be created during onboarding
+- Once onboarding is complete, the endpoints are disabled
+- Strong password requirements (minimum 8 characters)
+- Email validation
+- The initial admin is automatically verified and assigned the admin role
 
 ## Error Handling
 
@@ -383,14 +434,30 @@ Error responses follow this format:
 You can test the system using curl:
 
 ```bash
-# Login
-curl -X POST http://localhost:8080/account/signin \
-  -H "Content-Type: application/json" \
-  -d '{"email":"admin@plainq.local","password":"admin"}'
+# First, check if onboarding is needed
+curl -X GET http://localhost:8080/onboarding/status
 
-# Use token in subsequent requests
+# If onboarding is needed, complete it
+curl -X POST http://localhost:8080/onboarding/complete \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "admin@yourdomain.com",
+    "password": "your-secure-password",
+    "name": "Administrator"
+  }'
+
+# Extract the access token from the response and use it
+# For subsequent requests after onboarding
 curl -X GET http://localhost:8080/rbac/roles \
   -H "Authorization: Bearer $ACCESS_TOKEN"
+
+# Or login with the created admin user
+curl -X POST http://localhost:8080/account/signin \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "admin@yourdomain.com",
+    "password": "your-secure-password"
+  }'
 ```
 
 This completes the authentication and RBAC implementation for PlainQ.
