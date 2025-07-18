@@ -52,14 +52,26 @@
 - **storage.go**: SQLite storage for admin checking
 - Secure initial admin creation process
 
-### 7. Documentation (`docs/authentication-rbac.md`)
+### 7. OAuth Service (`internal/server/service/oauth/`)
+✅ **Complete OAuth integration** including:
+- **service.go**: OAuth provider management and user sync
+- **http_transport.go**: REST API for OAuth operations
+- **storage.go**: SQLite storage for OAuth data
+- Support for multiple OAuth providers (Kinde, Auth0, etc.)
+
+### 8. Enhanced Configuration (`internal/server/config/`)
+✅ **Extended configuration** with:
+- OAuth provider settings
+- Organization and team configuration
+- Multi-tenancy options
+- Hybrid authentication support
+
+### 9. Documentation
 ✅ **Comprehensive documentation** covering:
-- System architecture
-- Database schema
-- API endpoints
-- Middleware usage examples
-- Security considerations
-- Testing instructions
+- **docs/authentication-rbac.md**: Core authentication and RBAC
+- **docs/oauth-organizations-teams.md**: OAuth and multi-tenancy
+- System architecture and integration examples
+- Security considerations and best practices
 
 ## Key Features Implemented
 
@@ -76,12 +88,16 @@
 - ✅ Admin role with full permissions
 - ✅ Fine-grained permission checking
 - ✅ User role management
+- ✅ Organization-scoped permissions
+- ✅ Team-based access control
 
 ### Middleware
 - ✅ JWT authentication middleware
+- ✅ OAuth authentication middleware
 - ✅ Role requirement middleware
 - ✅ Queue permission middleware
 - ✅ Onboarding requirement middleware
+- ✅ Organization isolation middleware
 - ✅ Context-based user information access
 
 ### API Endpoints
@@ -90,6 +106,9 @@
 - ✅ Queue permission management
 - ✅ Permission checking endpoints
 - ✅ Onboarding status and completion endpoints
+- ✅ OAuth provider management
+- ✅ User synchronization endpoints
+- ✅ Organization and team management
 
 ## Database Schema Improvements
 
@@ -103,6 +122,12 @@
 - ✅ `roles` table with default roles (admin, producer, consumer)
 - ✅ `user_roles` many-to-many relationship
 - ✅ `queue_permissions` for granular access control
+- ✅ `organizations` table for multi-tenancy
+- ✅ `teams` table for team-based organization
+- ✅ `user_teams` for team membership
+- ✅ `team_roles` for team-based role assignment
+- ✅ `org_queue_permissions` for organization-scoped permissions
+- ✅ `oauth_providers` for OAuth configuration
 
 ## Code Organization
 
@@ -110,20 +135,33 @@
 internal/server/
 ├── middleware/
 │   ├── auth.go          # JWT authentication middleware
+│   ├── oauth.go         # OAuth authentication middleware (new)
 │   ├── rbac.go          # Permission checking middleware
+│   ├── onboarding.go    # Onboarding requirement middleware (new)
 │   └── middlewares.go   # Existing middleware
 ├── service/
 │   ├── account/
 │   │   ├── service.go       # Account service (updated)
 │   │   ├── storage.go       # SQLite storage implementation (new)
 │   │   └── http_transport.go # Updated with role support
-│   └── rbac/
-│       ├── service.go       # RBAC service (new)
-│       ├── http_transport.go # RBAC API endpoints (new)
-│       └── storage.go       # RBAC storage implementation (new)
+│   ├── rbac/
+│   │   ├── service.go       # RBAC service (new)
+│   │   ├── http_transport.go # RBAC API endpoints (new)
+│   │   └── storage.go       # RBAC storage implementation (new)
+│   ├── oauth/
+│   │   ├── service.go       # OAuth service (new)
+│   │   ├── http_transport.go # OAuth API endpoints (new)
+│   │   └── storage.go       # OAuth storage implementation (new)
+│   └── onboarding/
+│       ├── service.go       # Onboarding service (new)
+│       ├── http_transport.go # Onboarding API endpoints (new)
+│       └── storage.go       # Onboarding storage implementation (new)
+├── config/
+│   └── config.go        # Extended with OAuth and org/team config (updated)
 └── mutations/storage/
     ├── 1_schema.sql     # Base schema (existing)
-    └── 2_user.sql       # RBAC schema (updated)
+    ├── 2_user.sql       # RBAC schema (updated)
+    └── 3_organizations.sql # Organizations and teams schema (new)
 ```
 
 ## Security Features
