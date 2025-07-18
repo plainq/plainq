@@ -47,6 +47,9 @@ type Storage interface {
 
 	// DenyAccessToken denies access token by given token string.
 	DenyAccessToken(ctx context.Context, token string, ttl time.Duration) error
+
+	// GetUserRoles gets all roles for a user by user ID.
+	GetUserRoles(ctx context.Context, userID string) ([]string, error)
 }
 
 // Account represents user account with all its properties.
