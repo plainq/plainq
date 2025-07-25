@@ -22,6 +22,12 @@ const (
 )
 
 func (s *Service) signUpHandler(w http.ResponseWriter, r *http.Request) {
+	// Check if registration is enabled
+	if !s.cfg.AuthRegistrationEnable {
+		respond.ErrorHTTP(w, r, fmt.Errorf("%w: user registration is disabled", errkit.ErrUnauthorized))
+		return
+	}
+
 	type request struct {
 		Email    string `json:"email"`
 		Password string `json:"password"`
@@ -316,6 +322,19 @@ func (s *Service) verifyPasswordResetCodeHandler(w http.ResponseWriter, r *http.
 
 // createSession is a helper function to create a new session.
 func (s *Service) createSession(ctx context.Context, aid, tid string, t time.Time) (*Session, error) {
+	// Get user account to get email
+	account, err := s.storage.GetAccountByID(ctx, aid)
+	if err != nil {
+		return nil, fmt.Errorf("account service: failed to get account: %w", err)
+	}
+
+	// Get user roles
+	roles, err := s.storage.GetUserRoles(ctx, aid)
+	if err != nil {
+		// If no roles found, continue with empty roles
+		roles = []string{}
+	}
+
 	accessToken, aErr := s.tokman.Sign(&jwtkit.Token{
 		Claims: jwtkit.Claims{
 			ID:        tid,
@@ -327,7 +346,9 @@ func (s *Service) createSession(ctx context.Context, aid, tid string, t time.Tim
 			NotBefore: jwt.NewNumericDate(t),
 		},
 		Meta: map[string]any{
-			"aid": aid,
+			"uid":   aid,
+			"email": account.Email,
+			"roles": roles,
 		},
 	})
 	if aErr != nil {
