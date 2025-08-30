@@ -12,7 +12,10 @@ type Storage interface {
 	CreateQueue(ctx context.Context, input *v1.CreateQueueRequest) (*v1.CreateQueueResponse, error)
 
 	// DescribeQueue returns information about specified queue.
-	DescribeQueue(ctx context.Context, input *v1.DescribeQueueRequest) (*v1.DescribeQueueResponse, error)
+	DescribeQueue(
+		ctx context.Context,
+		input *v1.DescribeQueueRequest,
+	) (*v1.DescribeQueueResponse, error)
 
 	// ListQueues returns a list of existing queues.
 	ListQueues(ctx context.Context, input *v1.ListQueuesRequest) (*v1.ListQueuesResponse, error)

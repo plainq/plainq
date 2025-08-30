@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math"
 	"os"
 	"os/signal"
 	"strings"
@@ -47,6 +48,9 @@ func listQueueCommand() *scotty.Command {
 				return fmt.Errorf("create client: %w", cliErr)
 			}
 
+			if limit > math.MaxInt32 {
+				return fmt.Errorf("limit value too large: %d", limit)
+			}
 			in := &v1.ListQueuesRequest{
 				Limit: int32(limit),
 			}
@@ -141,6 +145,10 @@ func createQueueCommand() *scotty.Command {
 
 			default:
 				return fmt.Errorf(`unknown drop policy: %q, should be on of: ["dead-letter", "drop"]`, dropPolicy)
+			}
+
+			if maxReceiveAttempts > math.MaxUint32 {
+				return fmt.Errorf("max receive attempts value too large: %d", maxReceiveAttempts)
 			}
 
 			in := &v1.CreateQueueRequest{
@@ -470,6 +478,9 @@ func receiveCommand() *scotty.Command {
 				return fmt.Errorf("create client: %w", cliErr)
 			}
 
+			if batch > math.MaxUint32 {
+				return fmt.Errorf("batch size value too large: %d", batch)
+			}
 			in := &v1.ReceiveRequest{
 				QueueId:   id,
 				BatchSize: uint32(batch),

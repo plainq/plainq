@@ -66,11 +66,19 @@ func New(addr string, options ...Option) (*Client, error) {
 	return &c, nil
 }
 
-func (c *Client) ListQueues(ctx context.Context, in *v1.ListQueuesRequest, opts ...grpc.CallOption) (*v1.ListQueuesResponse, error) {
+func (c *Client) ListQueues(
+	ctx context.Context,
+	in *v1.ListQueuesRequest,
+	opts ...grpc.CallOption,
+) (*v1.ListQueuesResponse, error) {
 	return c.client.ListQueues(ctx, in, opts...)
 }
 
-func (c *Client) DescribeQueue(ctx context.Context, in *v1.DescribeQueueRequest, opts ...grpc.CallOption) (*v1.DescribeQueueResponse, error) {
+func (c *Client) DescribeQueue(
+	ctx context.Context,
+	in *v1.DescribeQueueRequest,
+	opts ...grpc.CallOption,
+) (*v1.DescribeQueueResponse, error) {
 	return c.client.DescribeQueue(ctx, in, opts...)
 }
 

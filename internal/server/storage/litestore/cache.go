@@ -252,7 +252,7 @@ func propsToProto(p QueueProps) *v1.DescribeQueueResponse {
 		RetentionPeriodSeconds:   p.RetentionPeriodSeconds,
 		VisibilityTimeoutSeconds: p.VisibilityTimeoutSeconds,
 		MaxReceiveAttempts:       p.MaxReceiveAttempts,
-		EvictionPolicy:           v1.EvictionPolicy(p.EvictionPolicy),
+		EvictionPolicy:           v1.EvictionPolicy(int32(p.EvictionPolicy)),
 		DeadLetterQueueId:        p.DeadLetterQueueID,
 	}
 
@@ -267,7 +267,7 @@ func propsFromProto(p *v1.DescribeQueueResponse) QueueProps {
 		RetentionPeriodSeconds:   p.RetentionPeriodSeconds,
 		VisibilityTimeoutSeconds: p.VisibilityTimeoutSeconds,
 		MaxReceiveAttempts:       p.MaxReceiveAttempts,
-		EvictionPolicy:           uint32(p.EvictionPolicy),
+		EvictionPolicy:           uint32(int32(p.EvictionPolicy)),
 		DeadLetterQueueID:        p.DeadLetterQueueId,
 	}
 

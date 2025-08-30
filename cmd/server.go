@@ -63,7 +63,7 @@ func serverCommand() *scotty.Command {
 				"set logging level: 'debug', 'info', 'warning', 'error'",
 			)
 
-			// Telemetry
+			// Telemetry.
 
 			f.BoolVar(&cfg.TelemetryEnabled, "telemetry.enable", true,
 				"enable telemetry subsystem",

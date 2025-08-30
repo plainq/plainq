@@ -184,7 +184,7 @@ func (s *Storage) sweep(ctx context.Context, queueID string) (_ *sweepResult, sE
 		return nil, fmt.Errorf("commit transaction: %w", err)
 	}
 
-	s.observer.MessageDropped(queueID, v1.EvictionPolicy(props.EvictionPolicy)).
+	s.observer.MessageDropped(queueID, v1.EvictionPolicy(int32(props.EvictionPolicy))).
 		Add(messagesDropped)
 
 	result := sweepResult{
@@ -209,6 +209,9 @@ func dropMessages(ctx context.Context, tx *sql.Tx, props QueueProps) (uint64, er
 		return 0, fmt.Errorf("get affected rows: %w", rowsErr)
 	}
 
+	if rows < 0 {
+		return 0, fmt.Errorf("negative rows affected: %d", rows)
+	}
 	return uint64(rows), nil
 }
 
