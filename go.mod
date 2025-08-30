@@ -1,6 +1,6 @@
 module github.com/plainq/plainq
 
-go 1.23
+go 1.25
 
 require (
 	github.com/VictoriaMetrics/metrics v1.35.1
