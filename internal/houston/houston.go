@@ -1,7 +1,7 @@
 package houston
 
 import (
-	"fmt"
+	"errors"
 	"io/fs"
 	"os"
 )
@@ -11,5 +11,5 @@ func Bundle() fs.FS {
 	if _, err := os.Stat("ui/dist"); err == nil {
 		return os.DirFS("ui/dist")
 	}
-	panic(fmt.Errorf("unable to find ui/dist folder"))
+	panic(errors.New("unable to find ui/dist folder"))
 }

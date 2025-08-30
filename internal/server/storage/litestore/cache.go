@@ -122,7 +122,7 @@ func (c *QueuePropsCache) list(options ...QueuePropsListOption) []QueueProps {
 
 	i := 0
 
-	iter := func(k string, e *list.Element) bool {
+	iter := func(_ string, e *list.Element) bool {
 		v, ok := e.Value.(QueueProps)
 		if !ok {
 			panic(fmt.Errorf("invalid type in queue props cache: %#v", e.Value))
@@ -252,7 +252,7 @@ func propsToProto(p QueueProps) *v1.DescribeQueueResponse {
 		RetentionPeriodSeconds:   p.RetentionPeriodSeconds,
 		VisibilityTimeoutSeconds: p.VisibilityTimeoutSeconds,
 		MaxReceiveAttempts:       p.MaxReceiveAttempts,
-		EvictionPolicy:           v1.EvictionPolicy(int32(p.EvictionPolicy)),
+		EvictionPolicy:           v1.EvictionPolicy(p.EvictionPolicy),
 		DeadLetterQueueId:        p.DeadLetterQueueID,
 	}
 
@@ -267,7 +267,7 @@ func propsFromProto(p *v1.DescribeQueueResponse) QueueProps {
 		RetentionPeriodSeconds:   p.RetentionPeriodSeconds,
 		VisibilityTimeoutSeconds: p.VisibilityTimeoutSeconds,
 		MaxReceiveAttempts:       p.MaxReceiveAttempts,
-		EvictionPolicy:           uint32(int32(p.EvictionPolicy)),
+		EvictionPolicy:           uint32(p.EvictionPolicy),
 		DeadLetterQueueID:        p.DeadLetterQueueId,
 	}
 

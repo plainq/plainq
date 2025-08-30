@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math"
 	"os"
@@ -13,6 +14,11 @@ import (
 	"github.com/plainq/plainq/internal/client"
 	v1 "github.com/plainq/plainq/internal/server/schema/v1"
 	"github.com/plainq/servekit/idkit"
+)
+
+const (
+	// defaultLimit represents the default limit for listing queues.
+	defaultLimit = 500
 )
 
 func listQueueCommand() *scotty.Command {
@@ -35,11 +41,11 @@ func listQueueCommand() *scotty.Command {
 				"enables json output",
 			)
 
-			flags.UintVar(&limit, "limit", 500,
+			flags.UintVar(&limit, "limit", defaultLimit,
 				"sets pages size for pagination",
 			)
 		},
-		Run: func(cmd *scotty.Command, args []string) error {
+		Run: func(_ *scotty.Command, _ []string) error {
 			ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 			defer cancel()
 
@@ -119,12 +125,12 @@ func createQueueCommand() *scotty.Command {
 				"",
 			)
 		},
-		Run: func(cmd *scotty.Command, args []string) error {
+		Run: func(_ *scotty.Command, args []string) error {
 			ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 			defer cancel()
 
 			if len(args) < 1 {
-				return fmt.Errorf("queue name should be specified: plainq create [queue name]")
+				return errors.New("queue name should be specified: plainq create [queue name]")
 			}
 
 			name := args[0]
@@ -200,12 +206,12 @@ func describeQueueCommand() *scotty.Command {
 				"enables json output",
 			)
 		},
-		Run: func(cmd *scotty.Command, args []string) error {
+		Run: func(_ *scotty.Command, args []string) error {
 			ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 			defer cancel()
 
 			if len(args) < 1 {
-				return fmt.Errorf("queue id should be specified: plainq describe [queue id]")
+				return errors.New("queue id should be specified: plainq describe [queue id]")
 			}
 
 			id := args[0]
@@ -260,12 +266,12 @@ func purgeQueueCommand() *scotty.Command {
 				"enables json output",
 			)
 		},
-		Run: func(cmd *scotty.Command, args []string) error {
+		Run: func(_ *scotty.Command, args []string) error {
 			ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 			defer cancel()
 
 			if len(args) < 1 {
-				return fmt.Errorf("queue id should be specified: plainq purge [queue id]")
+				return errors.New("queue id should be specified: plainq purge [queue id]")
 			}
 
 			id := args[0]
@@ -325,12 +331,12 @@ func deleteQueueCommand() *scotty.Command {
 				"enables force delete",
 			)
 		},
-		Run: func(cmd *scotty.Command, args []string) error {
+		Run: func(_ *scotty.Command, args []string) error {
 			ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 			defer cancel()
 
 			if len(args) < 1 {
-				return fmt.Errorf("queue id should be specified: plainq delete [queue id]")
+				return errors.New("queue id should be specified: plainq delete [queue id]")
 			}
 
 			id := args[0]
@@ -390,12 +396,12 @@ func sendCommand() *scotty.Command {
 				"enables json output",
 			)
 		},
-		Run: func(cmd *scotty.Command, args []string) error {
+		Run: func(_ *scotty.Command, args []string) error {
 			ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 			defer cancel()
 
 			if len(args) < 1 {
-				return fmt.Errorf("queue id should be specified: plainq send [flags...] [queue id]")
+				return errors.New("queue id should be specified: plainq send [flags...] [queue id]")
 			}
 
 			id := args[0]
@@ -459,12 +465,12 @@ func receiveCommand() *scotty.Command {
 				"enables json output",
 			)
 		},
-		Run: func(cmd *scotty.Command, args []string) error {
+		Run: func(_ *scotty.Command, args []string) error {
 			ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 			defer cancel()
 
 			if len(args) < 1 {
-				return fmt.Errorf("queue id should be specified: plainq send [flags...] [queue id]")
+				return errors.New("queue id should be specified: plainq send [flags...] [queue id]")
 			}
 
 			id := args[0]

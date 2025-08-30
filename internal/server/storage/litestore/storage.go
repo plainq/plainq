@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"math"
 	"time"
 
 	"github.com/heartwilltell/hc"
@@ -188,7 +189,7 @@ func (s *Storage) CreateQueue(ctx context.Context, input *v1.CreateQueueRequest)
 		RetentionPeriodSeconds:   input.RetentionPeriodSeconds,
 		VisibilityTimeoutSeconds: input.VisibilityTimeoutSeconds,
 		MaxReceiveAttempts:       input.MaxReceiveAttempts,
-		EvictionPolicy:           uint32(int32(input.EvictionPolicy)),
+		EvictionPolicy:           uint32(input.EvictionPolicy),
 		DeadLetterQueueID:        input.DeadLetterQueueId,
 	}
 
@@ -214,7 +215,6 @@ func (s *Storage) ListQueues(ctx context.Context, input *v1.ListQueuesRequest) (
 	limit := pageSize + 1
 
 	query := queryListQueues(limit, input.Cursor, input.OrderBy, input.SortBy)
-
 
 	queues, listErr := s.listQueues(ctx, query, uint32(limit))
 	if listErr != nil {
@@ -350,7 +350,7 @@ func (s *Storage) PurgeQueue(ctx context.Context, input *v1.PurgeQueueRequest) (
 		return nil, fmt.Errorf("purge queue %q info record: %w", queueID, rowsErr)
 	}
 
-	if count < 0 || rows != int64(count) {
+	if count > math.MaxInt64 || rows != int64(count) {
 		return nil, fmt.Errorf("purge queue %q count (%d) != rows affected (%d) by purge", queueID, count, rows)
 	}
 
@@ -519,7 +519,6 @@ func (s *Storage) Receive(ctx context.Context, input *v1.ReceiveRequest) (_ *v1.
 	output := v1.ReceiveResponse{
 		Messages: make([]*v1.ReceiveMessage, 0, input.BatchSize),
 	}
-
 
 	visibleAt := time.Now().UTC().Add(time.Duration(info.VisibilityTimeoutSeconds) * time.Second)
 

@@ -1,7 +1,7 @@
 package telemetry
 
 import (
-	"fmt"
+	"errors"
 	"slices"
 	"strings"
 	"time"
@@ -60,7 +60,7 @@ func LabelsFromString(s string) (Labels, error) {
 
 	kvs := strings.Split(s, ",")
 	if len(kvs) == 0 {
-		return nil, fmt.Errorf("invalid labels format")
+		return nil, errors.New("invalid labels format")
 	}
 
 	labels := make([]Label, len(kvs))
@@ -68,7 +68,7 @@ func LabelsFromString(s string) (Labels, error) {
 		parts := strings.Split(kv, "=")
 
 		if len(parts) != 2 {
-			return nil, fmt.Errorf("invalid labels format")
+			return nil, errors.New("invalid labels format")
 		}
 
 		labels[i] = Label{

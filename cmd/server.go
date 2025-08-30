@@ -168,7 +168,7 @@ func serverCommand() *scotty.Command {
 			)
 		},
 
-		Run: func(cmd *scotty.Command, args []string) error {
+		Run: func(_ *scotty.Command, _ []string) error {
 			ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 			defer cancel()
 

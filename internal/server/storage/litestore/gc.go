@@ -184,7 +184,7 @@ func (s *Storage) sweep(ctx context.Context, queueID string) (_ *sweepResult, sE
 		return nil, fmt.Errorf("commit transaction: %w", err)
 	}
 
-	s.observer.MessageDropped(queueID, v1.EvictionPolicy(int32(props.EvictionPolicy))).
+	s.observer.MessageDropped(queueID, v1.EvictionPolicy(props.EvictionPolicy)).
 		Add(messagesDropped)
 
 	result := sweepResult{

@@ -39,7 +39,7 @@ func contextInitCommand() *scotty.Command {
 	cmd := scotty.Command{
 		Name:  "init",
 		Short: "Create context configuration file",
-		Run: func(cmd *scotty.Command, args []string) error {
+		Run: func(_ *scotty.Command, _ []string) error {
 			// TODO: create context in default location.
 			// TODO: ~/.config/plainq/context.json.
 
@@ -78,7 +78,7 @@ func contextListCommand() *scotty.Command {
 	cmd := scotty.Command{
 		Name:  "list",
 		Short: "show list of available contexts",
-		Run: func(cmd *scotty.Command, args []string) error {
+		Run: func(_ *scotty.Command, _ []string) error {
 			f, readErr := readContextFile()
 			if readErr != nil {
 				if errors.Is(readErr, os.ErrNotExist) {
