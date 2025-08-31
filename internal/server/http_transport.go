@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"math"
 	"net/http"
 	"strconv"
 	"strings"
@@ -58,6 +59,10 @@ func (s *PlainQ) listQueuesHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		if limit > math.MaxInt32 {
+			respond.ErrorHTTP(w, r, fmt.Errorf("%w: limit value too large", errkit.ErrInvalidArgument))
+			return
+		}
 		input.Limit = int32(limit)
 	}
 

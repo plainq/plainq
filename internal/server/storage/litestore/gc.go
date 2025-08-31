@@ -209,6 +209,9 @@ func dropMessages(ctx context.Context, tx *sql.Tx, props QueueProps) (uint64, er
 		return 0, fmt.Errorf("get affected rows: %w", rowsErr)
 	}
 
+	if rows < 0 {
+		return 0, fmt.Errorf("negative rows affected: %d", rows)
+	}
 	return uint64(rows), nil
 }
 

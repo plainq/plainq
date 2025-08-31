@@ -122,7 +122,7 @@ func (c *QueuePropsCache) list(options ...QueuePropsListOption) []QueueProps {
 
 	i := 0
 
-	iter := func(k string, e *list.Element) bool {
+	iter := func(_ string, e *list.Element) bool {
 		v, ok := e.Value.(QueueProps)
 		if !ok {
 			panic(fmt.Errorf("invalid type in queue props cache: %#v", e.Value))

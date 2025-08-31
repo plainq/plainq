@@ -1,10 +1,10 @@
 module github.com/plainq/plainq
 
-go 1.23
+go 1.25
 
 require (
 	github.com/VictoriaMetrics/metrics v1.35.1
-	github.com/cockroachdb/swiss v0.0.0-20240612210725-f4de07ae6964
+	github.com/cockroachdb/swiss v0.0.0-20250624142022-d6e517c1d961
 	github.com/go-chi/chi/v5 v5.2.0
 	github.com/go-chi/cors v1.2.1
 	github.com/heartwilltell/hc v0.1.5

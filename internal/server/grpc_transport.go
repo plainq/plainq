@@ -7,7 +7,10 @@ import (
 	"github.com/plainq/servekit/respond"
 )
 
-func (s *PlainQ) ListQueues(ctx context.Context, r *v1.ListQueuesRequest) (*v1.ListQueuesResponse, error) {
+func (s *PlainQ) ListQueues(
+	ctx context.Context,
+	r *v1.ListQueuesRequest,
+) (*v1.ListQueuesResponse, error) {
 	output, listErr := s.storage.ListQueues(ctx, r)
 	if listErr != nil {
 		return respond.ErrorGRPC[*v1.ListQueuesResponse](ctx, listErr)
@@ -16,7 +19,10 @@ func (s *PlainQ) ListQueues(ctx context.Context, r *v1.ListQueuesRequest) (*v1.L
 	return output, nil
 }
 
-func (s *PlainQ) DescribeQueue(ctx context.Context, r *v1.DescribeQueueRequest) (*v1.DescribeQueueResponse, error) {
+func (s *PlainQ) DescribeQueue(
+	ctx context.Context,
+	r *v1.DescribeQueueRequest,
+) (*v1.DescribeQueueResponse, error) {
 	if err := validateQueueIDFromRequest(r); err != nil {
 		return respond.ErrorGRPC[*v1.DescribeQueueResponse](ctx, err)
 	}

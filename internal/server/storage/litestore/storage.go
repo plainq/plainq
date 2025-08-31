@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"math"
 	"time"
 
 	"github.com/heartwilltell/hc"
@@ -34,7 +35,7 @@ const (
 	// which is set to 7 days.
 	msgRetentionPeriod = 7 * 24 * time.Hour
 
-	// maxReceiveAttempts represents the maximum number of receive attempts for a message
+	// maxReceiveAttempts represents the maximum number of receive attempts for a message.
 	maxReceiveAttempts = 5
 
 	// queuePropsCacheSize represents the size of the queue properties cache.
@@ -349,7 +350,7 @@ func (s *Storage) PurgeQueue(ctx context.Context, input *v1.PurgeQueueRequest) (
 		return nil, fmt.Errorf("purge queue %q info record: %w", queueID, rowsErr)
 	}
 
-	if rows != int64(count) {
+	if count > math.MaxInt64 || rows != int64(count) {
 		return nil, fmt.Errorf("purge queue %q count (%d) != rows affected (%d) by purge", queueID, count, rows)
 	}
 
