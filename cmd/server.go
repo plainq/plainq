@@ -15,7 +15,11 @@ import (
 	"github.com/plainq/plainq/internal/server"
 	"github.com/plainq/plainq/internal/server/config"
 	"github.com/plainq/plainq/internal/server/mutations"
-	queuestore"github.com/plainq/plainq/internal/server/service/queue/litestore"
+	"github.com/plainq/plainq/internal/server/service/account"
+	"github.com/plainq/plainq/internal/server/service/queue"
+	queuestore "github.com/plainq/plainq/internal/server/service/queue/litestore"
+	accountstore "github.com/plainq/plainq/internal/server/service/account/litestore"
+	"github.com/plainq/servekit/authkit/hashkit"
 	"github.com/plainq/servekit/dbkit/litekit"
 	"github.com/plainq/servekit/logkit"
 )
@@ -79,6 +83,10 @@ func serverCommand() *scotty.Command {
 
 			f.DurationVar(&cfg.AuthRefreshTokenTTL, "auth.refresh.ttl", 24*30*time.Hour,
 				"set refresh token TTL",
+			)
+
+			f.BoolVar(&cfg.AuthEmailVerificationEnable, "auth.email.verification.enable", true,
+				"enable email verification",
 			)
 
 			// Telemetry.
@@ -197,6 +205,12 @@ func serverCommand() *scotty.Command {
 
 			logger.Info("Starting plainq server")
 
+			var checker hc.HealthChecker = hc.NewNopChecker()
+
+			if cfg.HealthEnable {
+				checker = hc.NewMultiChecker()
+			}
+
 			// Storage initialization.
 
 			conn, connErr := initDBConnection(&cfg, logger)
@@ -204,29 +218,29 @@ func serverCommand() *scotty.Command {
 				return connErr
 			}
 
-			sqliteStorage, storageInitErr := initStorage(&cfg, logger, conn)
-			if storageInitErr != nil {
-				return storageInitErr
+			queueStorage, queueStorageInitErr := initQueueStorage(&cfg, logger, conn)
+			if queueStorageInitErr != nil {
+				return queueStorageInitErr
 			}
 
 			defer func() {
-				if err := sqliteStorage.Close(); err != nil {
+				if err := queueStorage.Close(); err != nil {
 					logger.Error("Failed to close storage database connection",
 						slog.String("error", err.Error()),
 					)
 				}
 			}()
 
-			var checker hc.HealthChecker = hc.NewNopChecker()
+			queueService := queue.NewService(&cfg, logger, queueStorage)
 
-			if cfg.HealthEnable {
-				checker = hc.NewMultiChecker(sqliteStorage)
+			accountStorage, accountStorageInitErr := initAccountStorage(&cfg, logger, conn)
+			if accountStorageInitErr != nil {
+				return accountStorageInitErr
 			}
 
-			queueService := queue.NewService(cfg, logger, sqliteStorage)
-			accountService := account.NewService(cfg, logger, sqliteStorage)
+			accountService := account.NewService(&cfg, logger, hashkit.NewBCryptHasher(), accountStorage)
 
-			plainqServer, serverErr := server.NewServer(&cfg, logger, checker)
+			plainqServer, serverErr := server.NewServer(&cfg, logger, checker, queueService, accountService)
 			if serverErr != nil {
 				return fmt.Errorf("create PlainQ server: %s", serverErr.Error())
 			}
@@ -324,7 +338,7 @@ func initDBConnection(cfg *config.Config, logger *slog.Logger) (*litekit.Conn, e
 	return conn, nil
 }
 
-func initStorage(cfg *config.Config, logger *slog.Logger, conn *litekit.Conn) (*queuestore.Storage, error) {
+func initQueueStorage(cfg *config.Config, logger *slog.Logger, conn *litekit.Conn) (*queuestore.Storage, error) {
 	storageOptions := make([]queuestore.Option, 0, 2)
 
 	if cfg.StorageLogEnable {
@@ -336,6 +350,21 @@ func initStorage(cfg *config.Config, logger *slog.Logger, conn *litekit.Conn) (*
 	}
 
 	sqliteStorage, storageInitErr := queuestore.New(conn, storageOptions...)
+	if storageInitErr != nil {
+		return nil, fmt.Errorf("create storage: %w", storageInitErr)
+	}
+
+	return sqliteStorage, nil
+}
+
+func initAccountStorage(cfg *config.Config, logger *slog.Logger, conn *litekit.Conn) (*accountstore.Storage, error) {
+	storageOptions := make([]accountstore.Option, 0, 2)
+
+	if cfg.StorageLogEnable {
+		storageOptions = append(storageOptions, accountstore.WithLogger(logger))
+	}
+
+	sqliteStorage, storageInitErr := accountstore.NewStorage(conn, logger, storageOptions...)
 	if storageInitErr != nil {
 		return nil, fmt.Errorf("create storage: %w", storageInitErr)
 	}

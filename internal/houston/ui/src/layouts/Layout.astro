@@ -1,7 +1,8 @@
 ---
 // import '@fontsource/source-serif-4'
 import '@/styles/globals.css';
-import { Toaster } from 'react-hot-toast';
+// import { Toaster } from 'react-hot-toast'; // Removed react-hot-toast
+import { Toaster } from "@/components/ui/toaster"; // Use the new Toaster component
 
 interface Props {
   title: string;
@@ -25,6 +26,7 @@ const {title, description, ogimage} = Astro.props;
 </head>
 <body class="bg-white">
     <slot/>
-    <Toaster position="top-right" client:only="react" />
+    {/* <Toaster position="top-right" client:only="react" /> // Removed react-hot-toast Toaster */}
+    <Toaster client:only="react" /> {/* Use the new Toaster component */}
 </body>
 </html>

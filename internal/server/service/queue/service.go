@@ -48,7 +48,7 @@ type Service struct {
 	v1.UnimplementedPlainQServiceServer
 
 	cfg     *config.Config
-	logger  *slog.Logger
+	logger  *slog.Logger 
 	router  chi.Router
 	storage Storage
 }

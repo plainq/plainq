@@ -11,22 +11,19 @@ import {
 import { Button } from "@/components/ui/button";
 import { QueueCreateDialog } from "./queueCreateDialog";
 import QueuePagination from "./queuePagination";
-import { toast } from "react-hot-toast";
+import { useToast } from "@/hooks/use-toast";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function Queues() {  
+  const { toast } = useToast();
   const [queues, setQueues] = useState([]);
   const [loading, setLoading] = useState(true);
   const [cursor, setNextCursor] = useState("");
   const [hasMore, setHasMore] = useState(false);
   const [limit, setLimit] = useState(10);
-  const [cursors, setCursors] = useState(() => {
-    const stored = localStorage.getItem('queue_cursors');
-    return stored ? JSON.parse(stored) : [''];
-  });
-  const [currentPage, setCurrentPage] = useState(() => {
-    const stored = localStorage.getItem('queue_current_page');
-    return stored ? parseInt(stored) : 0;
-  });
+  const [cursors, setCursors] = useState(['']);
+  const [currentPage, setCurrentPage] = useState(0);
+  const [isApiUnreachable, setIsApiUnreachable] = useState(false);
   
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [queueName, setQueueName] = useState("");
@@ -37,12 +34,28 @@ export default function Queues() {
   const [deadLetterQueueId, setDeadLetterQueueId] = useState("");
 
   useEffect(() => {
+    // Load stored values when component mounts
+    const storedCursors = localStorage.getItem('queue_cursors');
+    const storedPage = localStorage.getItem('queue_current_page');
+    
+    if (storedCursors) {
+      setCursors(JSON.parse(storedCursors));
+    }
+    if (storedPage) {
+      setCurrentPage(parseInt(storedPage));
+    }
+  }, []);
+
+  useEffect(() => {
     fetchQueues(cursors[currentPage]);
   }, [limit, currentPage]);
 
   useEffect(() => {
-    localStorage.setItem('queue_cursors', JSON.stringify(cursors));
-    localStorage.setItem('queue_current_page', currentPage.toString());
+    // Only save to localStorage on the client side
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('queue_cursors', JSON.stringify(cursors));
+      localStorage.setItem('queue_current_page', currentPage.toString());
+    }
   }, [cursors, currentPage]);
 
   const handlePageChange = (direction) => {
@@ -73,11 +86,21 @@ export default function Queues() {
   const fetchQueues = async (currentCursor = "") => {
     try {
       setLoading(true);
+      setIsApiUnreachable(false);
       const response = await fetch(
         `http://localhost:8081/api/v1/queue?limit=${limit}&cursor=${currentCursor}`
       );
       if (!response.ok) {
-        throw new Error("Failed to fetch queues");
+        let errorMsg = "Failed to fetch queues";
+        try {
+            const errorData = await response.json();
+            if (errorData && errorData.message) {
+                errorMsg = errorData.message;
+            }
+        } catch (e) {
+            // Ignore if response is not JSON or already handled
+        }
+        throw new Error(errorMsg);
       }
 
       const data = await response.json();
@@ -86,6 +109,20 @@ export default function Queues() {
       setHasMore(data.hasMore || false);
     } catch (err) {
       console.error("Error fetching queues:", err);
+      if (err instanceof TypeError) {
+        toast({
+          title: "Connection Error",
+          description: "Failed to reach the backend. Please check your connection and try again.",
+          variant: "destructive",
+        });
+        setIsApiUnreachable(true);
+      } else {
+        toast({
+          title: "Error Fetching Queues",
+          description: err.message || "An unexpected error occurred while fetching queues.",
+          variant: "destructive",
+        });
+      }
     } finally {
       setLoading(false);
     }
@@ -94,11 +131,16 @@ export default function Queues() {
   const handleCreateQueue = async () => {
     // Validate required fields
     if (!queueName?.trim()) {
-      toast.error("Queue name is required");
+      toast({
+        title: "Validation Error",
+        description: "Queue name is required.",
+        variant: "destructive",
+      });
       return;
     }
 
     try {
+      setIsApiUnreachable(false);
       const response = await fetch("http://localhost:8081/api/v1/queue", {
         method: "POST",
         headers: {
@@ -136,15 +178,43 @@ export default function Queues() {
       
       // Close dialog and show success message
       setIsDialogOpen(false);
-      toast.success("Queue created successfully!");
+      toast({
+        title: "Success",
+        description: "Queue created successfully!",
+      });
       window.location.href = `/queue/${responseData.queueId}`;
     } catch (err) {
       console.error("Error creating queue:", err);
-      toast.error(err.message || "Failed to create queue");
+      if (err instanceof TypeError) {
+        toast({
+          title: "Connection Error",
+          description: "Failed to reach the backend. Please check your connection and try again.",
+          variant: "destructive",
+        });
+        setIsApiUnreachable(true);
+      } else {
+        toast({
+          title: "Error Creating Queue",
+          description: err.message || "Failed to create queue.",
+          variant: "destructive",
+        });
+      }
     }
   };
 
   if (loading) return <div>Loading...</div>;
+
+  if (isApiUnreachable) {
+    return (
+      <div className="container mx-auto pt-3 px-2">
+        <Alert variant="destructive">
+          <AlertDescription>
+            Could not connect to the backend API. Please ensure the API is running and accessible, then refresh the page.
+          </AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white px-2">

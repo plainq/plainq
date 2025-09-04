@@ -54,6 +54,12 @@ type Config struct {
 	DefaultOrganization     string // Default organization for single-tenant mode
 	TeamBasedPermissions    bool   // Enable team-based permissions
 
+	AuthEnable                  bool
+	AuthRegistrationEnable      bool
+	AuthAccessTokenTTL          time.Duration
+	AuthRefreshTokenTTL         time.Duration
+	AuthEmailVerificationEnable bool
+	
 	TelemetryEnabled   bool
 	TelemetryLogEnable bool
 	TelemetryProvider  string

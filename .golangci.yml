@@ -1,6 +1,6 @@
 run:
   tests: false # include test files or not, default is true.
-  go: '1.22'
+  go: '1.23'
 
 linters:
   disable-all: true

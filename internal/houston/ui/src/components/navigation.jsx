@@ -1,8 +1,23 @@
 import {Tabs, TabsContent, TabsList, TabsTrigger} from "@/components/ui/tabs"
 import {Avatar, AvatarFallback, AvatarImage} from "@/components/ui/avatar"
-import Queues from "@/components/queues.jsx";
+import { ChevronRight } from "lucide-react"
+import Queues from "@/components/queues"
 
-export default function Navigation() {
+export default function Navigation({ activeTab = "queues", hideContent = false, breadcrumb = null }) {
+  const handleTabChange = (value) => {
+    // Use regular browser navigation
+    const paths = {
+      "queues": "/",
+      "pubsub": "/pubsub",
+      "users&access": "/users",
+      "settings": "/settings"
+    };
+    
+    if (paths[value]) {
+      window.location.href = paths[value];
+    }
+  };
+
   return (
     <div className="">
       <div className="flex flex-row justify-between items-center px-6">
@@ -19,18 +34,34 @@ export default function Navigation() {
           </Avatar>
         </div>
       </div>
+
       <div className="bg-white p-4 rounded">
-        <Tabs defaultValue="queues">
+        <Tabs defaultValue={activeTab} onValueChange={handleTabChange}>
           <TabsList className="w-full justify-start">
-            <TabsTrigger value="queues"><span className="">Queues</span></TabsTrigger>
-            <TabsTrigger value="pubsub"><span className="">PubSub</span></TabsTrigger>
-            <TabsTrigger value="users&access"><span className="">Users & Access</span></TabsTrigger>
-            <TabsTrigger value="settings"><span className="">Settings</span></TabsTrigger>
+            <TabsTrigger value="queues">Queues</TabsTrigger>
+            <TabsTrigger value="pubsub">PubSub</TabsTrigger>
+            <TabsTrigger value="users&access">Users & Access</TabsTrigger>
+            <TabsTrigger value="settings">Settings</TabsTrigger>
           </TabsList>
-          <Queues/>
-          <TabsContent value="pubsub" className="px-1">Make changes to your account here.</TabsContent>
-          <TabsContent value="users&access" className="px-1">Change your password here.</TabsContent>
-          <TabsContent value="settings" className="px-1">Change your password here.</TabsContent>
+
+          {breadcrumb && (
+            <div className="py-4">
+              <div className="flex items-center text-sm text-gray-600">
+                <a href="/" className="hover:text-gray-900">Queues</a>
+                <ChevronRight className="h-4 w-4 mx-2" />
+                <span className="text-gray-900">{breadcrumb}</span>
+              </div>
+            </div>
+          )}
+
+          {!hideContent && (
+            <>
+              {activeTab === "queues" && <Queues />}
+              <TabsContent value="pubsub">Make changes to your account here.</TabsContent>
+              <TabsContent value="users&access">Change your password here.</TabsContent>
+              <TabsContent value="settings">Change your password here.</TabsContent>
+            </>
+          )}
         </Tabs>
       </div>
     </div>

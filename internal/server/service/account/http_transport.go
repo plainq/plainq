@@ -144,8 +144,8 @@ func (s *Service) signOutHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Remove "Bearer " prefix if present
-	token = strings.TrimPrefix(token, "Bearer ")
+	token = strings.TrimPrefix(token, "Bearer")
+	token = strings.TrimSpace(token)
 
 	if err := s.storage.DenyAccessToken(r.Context(), token, s.cfg.AuthAccessTokenTTL); err != nil {
 		respond.ErrorHTTP(w, r, fmt.Errorf("deny access token: %w", err))

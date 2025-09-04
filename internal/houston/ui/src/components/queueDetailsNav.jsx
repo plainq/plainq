@@ -1,38 +1,32 @@
 import {Tabs, TabsContent, TabsList, TabsTrigger} from "@/components/ui/tabs"
 import {Avatar, AvatarFallback, AvatarImage} from "@/components/ui/avatar"
 import QueueDetails from "@/components/queueDetails.jsx";
+import { ChevronRight } from "lucide-react";
 
-export default function QueueDetailsNav({queueDetails, error}) {
+export default function QueueDetailsNav({queueDetails, error, breadcrumbText}) {
   return (
-    <div className="">
-      <div className="flex flex-row justify-between items-center px-6">
-        <div>
-          <a href="/" className="text-lg text-gray-500 hover:text-gray-900">PlainQ</a>
-        </div>
-        <div className="flex flex-row items-center gap-2">
-          <div>
-            <a href="https://docs.plainq.com">Docs</a>
+    <div className="bg-white p-4 rounded">
+      {breadcrumbText && (
+        <div className="pb-4 mb-4 border-b border-gray-200">
+          <div className="flex items-center text-sm text-gray-600">
+            <a href="/" className="hover:text-gray-900">Queues</a>
+            <ChevronRight className="h-4 w-4 mx-2 shrink-0" />
+            <span className="font-medium text-gray-900 truncate" title={breadcrumbText}>{breadcrumbText}</span>
           </div>
-          <Avatar>
-            <AvatarImage src="https://github.com/shadcn.png"/>
-            <AvatarFallback>CN</AvatarFallback>
-          </Avatar>
         </div>
-      </div>
-      <div className="bg-white p-4 rounded">
-        <Tabs defaultValue="queue">
-          <TabsList className="w-full justify-start">
-            <TabsTrigger value="queue"><span className="">Queues</span></TabsTrigger>
-            <TabsTrigger value="pubsub"><span className="">PubSub</span></TabsTrigger>
-            <TabsTrigger value="users&access"><span className="">Users & Access</span></TabsTrigger>
-            <TabsTrigger value="settings"><span className="">Settings</span></TabsTrigger>
-          </TabsList>
-          <QueueDetails queueDetails={queueDetails} error={error}/>
-          <TabsContent value="pubsub" className="px-1">Make changes to your account here.</TabsContent>
-          <TabsContent value="users&access" className="px-1">Change your password here.</TabsContent>
-          <TabsContent value="settings" className="px-1">Change your password here.</TabsContent>
-        </Tabs>
-      </div>
+      )}
+      <Tabs defaultValue="overview">
+        <TabsList className="w-full justify-start">
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="messages">Messages</TabsTrigger>
+          <TabsTrigger value="metrics">Metrics</TabsTrigger>
+          <TabsTrigger value="settings">Settings</TabsTrigger>
+        </TabsList>
+        <QueueDetails queueDetails={queueDetails} error={error}/>
+        <TabsContent value="messages" className="px-1">Queue messages will be shown here.</TabsContent>
+        <TabsContent value="metrics" className="px-1">Queue metrics will be shown here.</TabsContent>
+        <TabsContent value="settings" className="px-1">Queue settings will be shown here.</TabsContent>
+      </Tabs>
     </div>
   )
 }

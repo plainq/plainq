@@ -7,7 +7,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/cockroachdb/swiss"
 	v1 "github.com/plainq/plainq/internal/server/schema/v1"
 	"github.com/plainq/servekit/tern"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -31,8 +30,8 @@ type QueuePropsCache struct {
 	mu   sync.RWMutex
 	size uint64
 
-	byID   *swiss.Map[string, *list.Element] // TODO: rewrite to use a map with go 1.24.
-	byName *swiss.Map[string, *list.Element] // TODO: rewrite to use a map with go 1.24.
+	byID   map[string]*list.Element
+	byName map[string]*list.Element
 	props  *list.List
 }
 
@@ -59,8 +58,8 @@ func NewQueuePropsCache(size uint64) *QueuePropsCache {
 
 	cache := QueuePropsCache{
 		size:   size,
-		byID:   swiss.New[string, *list.Element](int(size)),
-		byName: swiss.New[string, *list.Element](int(size)),
+		byID:   make(map[string]*list.Element, int(size)),
+		byName: make(map[string]*list.Element, int(size)),
 		props:  list.New(),
 	}
 
@@ -71,7 +70,7 @@ func (c *QueuePropsCache) getByID(id string) (QueueProps, bool) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
-	v, cached := c.byID.Get(id)
+	v, cached := c.byID[id]
 	if cached {
 		c.props.MoveToFront(v)
 
@@ -90,7 +89,7 @@ func (c *QueuePropsCache) getByName(name string) (QueueProps, bool) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
-	v, cached := c.byName.Get(name)
+	v, cached := c.byName[name]
 	if cached {
 		c.props.MoveToFront(v)
 
@@ -106,7 +105,7 @@ func (c *QueuePropsCache) getByName(name string) (QueueProps, bool) {
 }
 
 func (c *QueuePropsCache) list(options ...QueuePropsListOption) []QueueProps {
-	props := make([]QueueProps, c.byID.Len())
+	props := make([]QueueProps, len(c.byID))
 
 	listOptions := QueuePropsListOptions{
 		orderBy: v1.ListQueuesRequest_ORDER_BY_ID,
